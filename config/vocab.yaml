@@ -1,0 +1,19 @@
+# config/vocab.yaml
+custom_terms:
+  # Trading
+  - MNQ
+  - ES
+  - TradeZella
+
+  # Tech/Tools
+  - Runpod
+  - Meshy
+  - Make.com
+  - n8n
+  - Cursor
+  - Ollama
+
+  # Van life / Hardware
+  - Victron
+  - "80/20 aluminum"
+  - "Cochise County"

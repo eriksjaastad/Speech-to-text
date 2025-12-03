@@ -1,0 +1,44 @@
+# Audio files - test recordings and transcription inputs
+*.wav
+*.mp3
+*.m4a
+*.ogg
+*.flac
+
+# Reviews and planning docs (personal notes)
+reviews/
+
+# Logs
+logs/
+*.log
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Whisper model cache (if downloaded locally)
+models/
+*.bin
+*.pt
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
