@@ -72,9 +72,8 @@ class WhisperEngine:
             beam_size=5,
             temperature=0.0,
             condition_on_previous_text=False,
-            # VAD temporarily disabled for debugging
-            # vad_filter=True,
-            # vad_parameters=dict(min_silence_duration_ms=500)
+            vad_filter=True,
+            vad_parameters=dict(min_silence_duration_ms=500)
         )
 
         # Collect all segments

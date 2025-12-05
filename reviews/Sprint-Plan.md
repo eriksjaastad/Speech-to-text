@@ -49,15 +49,18 @@ Confirm that all bug fixes are working. Add test coverage so we never regress. L
 
 ---
 
-### 1.2 Verify VAD Filter Enabled ⚠️ DISABLED (see notes)
+### 1.2 Verify VAD Filter Enabled ✅ COMPLETE
 
 **What to check:**
-- [ ] `src/engine.py` `transcribe()` method includes `vad_filter=True`
-- [ ] `vad_parameters` dict is present with `min_silence_duration_ms`
+- [x] `src/engine.py` `transcribe()` method includes `vad_filter=True`
+- [x] `vad_parameters` dict is present with `min_silence_duration_ms=500`
 
 **File location:** `src/engine.py`, inside the `transcribe()` method, in the `self.model.transcribe()` call.
 
-**Note (Dec 5, 2025):** VAD was disabled during debugging. Can be re-enabled later if needed. Also discovered that `initial_prompt` (vocab injection) was causing truncated transcriptions - disabled for now.
+**Note (Dec 5, 2025):** 
+- VAD re-enabled after debugging
+- `initial_prompt` (vocab injection) was removed — it caused truncated transcriptions
+- Jargon (MNQ, etc.) handled via regex post-processing instead (more reliable!)
 
 ---
 

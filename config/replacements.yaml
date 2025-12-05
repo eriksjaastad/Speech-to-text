@@ -1,7 +1,16 @@
 replacements:
+  # MNQ variations
   "man cue": "MNQ"
+  "m and q": "MNQ"
+  "m n q": "MNQ"
+  "m and cue": "MNQ"
+  "mnq": "MNQ"
+  
+  # Place names
   "co cheese": "Cochise"
   "co-cheese": "Cochise"
+  
+  # Tech tools
   "pod runner": "Runpod"
   "run pod": "Runpod"
   "make dot com": "Make.com"
