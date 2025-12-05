@@ -190,6 +190,8 @@ class ErikSTT:
                 # Run callback if provided (e.g., to hide bubble)
                 if on_transcription_complete:
                     on_transcription_complete()
+                    # Give the UI thread a moment to actually hide the window
+                    time.sleep(0.2)
                 
                 # Inject text using clipboard-first method with AppleScript fallback
                 # restore_app ensures focus is back on the target before pasting
