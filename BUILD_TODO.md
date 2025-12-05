@@ -6,6 +6,30 @@
 
 ---
 
+## 🚨 Active Bugs (Prioritized for Resolution)
+
+### 1. Audio Truncation / Silence ("The Ghost Recording")
+**Symptoms:**
+- User speaks a full sentence (e.g., "Quick test number two").
+- Transcription output is either empty or captures only the middle/end (e.g., "test number two").
+- Log "Audio Duration" shows reasonable length (5s+), but result is silence.
+**Suspected Causes:**
+- **Startup Latency:** `sounddevice` stream initialization takes ~300-500ms, cutting off the first word. (Attempted fix: Persistent Stream).
+- **Audio Tail Cutoff:** Recording stops *exactly* when key is released, missing the last syllable. (Attempted fix: 0.5s buffer).
+- **Input Device Conflict:** Multiple instances or system audio settings causing "Silence" to be recorded.
+
+### 2. Focus Stealing / Injection Failure ("The Missing Paste")
+**Symptoms:**
+- Transcription completes successfully in console ("✓ Text injected").
+- Text does *not* appear in the target application (cursor location).
+- Debug logs show injection target might be `Electron` (VS Code) or the Bubble itself instead of the intended app (Notes/Browser).
+**Suspected Causes:**
+- **Bubble Window Focus:** The floating status bubble (`NSPanel`) becomes the "Key Window" when it appears, stealing focus from the user's active document.
+- **Injection Routing:** `Cmd+V` is sent to the currently focused app (the Bubble), which cannot accept text, effectively voiding the paste.
+- **Attempted Fix:** `NSWindowStyleMaskNonactivatingPanel` applied to Bubble to force non-interactive state.
+
+---
+
 ## Pre-Flight Checklist
 
 ### ✅ Step 0: Project Setup & Structure — COMPLETE
@@ -1113,3 +1137,22 @@ If you see `System Events got an error: osascript is not allowed to send keystro
 
 **Ready to start? Begin with Step 0!**
 
+
+---
+
+## Phase 2 Roadmap (Post-Analysis)
+
+Based on comparative analysis with OpenSuperWhisper, Whispr, and WhisperKit.
+
+### ☐ Optimization: Silence Detection (VAD) — "Quick Win"
+- [ ] Implement Voice Activity Detection (silero-vad or webrtcvad)
+- [ ] Goal: Automatic stop when user stops speaking (no second hotkey press required)
+
+### ☐ Optimization: Apple Silicon Acceleration — "Medium Effort"
+- [ ] Investigate `mlx-whisper` (Apple MLX framework)
+- [ ] Goal: Reduce latency from ~3.5s to <1s without full rewrite
+- [ ] Alternative: Evaluate `whisper.cpp` Python bindings with CoreML support
+
+### ☐ Major Upgrade: Native CoreML — "High Effort"
+- [ ] Evaluate full migration to WhisperKit architecture (Swift/Mac app)
+- [ ] Goal: 0.45s latency (72x real-time)

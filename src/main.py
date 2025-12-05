@@ -60,7 +60,16 @@ class ErikSTT:
         self.is_recording = False
         self.audio_data = []
         self.sample_rate = 16000
-        self.stream = None
+        
+        # Start persistent stream (eliminates startup latency)
+        print("\n🎤 Starting persistent audio stream...")
+        self.stream = sd.InputStream(
+            samplerate=self.sample_rate,
+            channels=1,
+            dtype='float32',
+            callback=self.audio_callback
+        )
+        self.stream.start()
         
         # Track currently pressed keys for Option+Space hotkey (toggle mode)
         self.pressed_keys = set()
@@ -71,10 +80,11 @@ class ErikSTT:
     def audio_callback(self, indata, frames, time_info, status):
         """Callback for sounddevice stream - appends audio chunks."""
         if status:
-            print(f"⚠ Audio callback status: {status}")
+            pass # print(f"⚠ Audio callback status: {status}")
         
-        # Append audio chunk to our buffer
-        self.audio_data.append(indata.copy())
+        # Only append if recording active
+        if self.is_recording:
+            self.audio_data.append(indata.copy())
     
     def start_recording(self):
         """Start recording audio from microphone."""
@@ -85,15 +95,6 @@ class ErikSTT:
         self.audio_data = []
         self.is_recording = True
         
-        # Create and start audio stream
-        self.stream = sd.InputStream(
-            samplerate=self.sample_rate,
-            channels=1,
-            dtype='float32',
-            callback=self.audio_callback
-        )
-        self.stream.start()
-        
         print("🎤 Recording...")
     
     def stop_recording(self):
@@ -101,11 +102,8 @@ class ErikSTT:
         if not self.is_recording:
             return  # Not recording
         
-        # Stop the stream
-        if self.stream:
-            self.stream.stop()
-            self.stream.close()
-            self.stream = None
+        # Wait a moment to capture the tail of the audio
+        time.sleep(0.5)
         
         self.is_recording = False
         print("⏹ Stopped")
@@ -138,6 +136,10 @@ class ErikSTT:
                 wav.write(temp_path, self.sample_rate, audio_int16)
                 
                 print(f"💾 Saved audio to {temp_path}")
+                
+                # Debug: Audio Duration
+                duration_sec = len(audio_array) / self.sample_rate
+                print(f"⏱ Recorded Audio Duration: {duration_sec:.2f}s")
                 
                 # Transcribe with custom vocabulary
                 print("🔊 Transcribing...")

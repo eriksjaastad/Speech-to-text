@@ -57,6 +57,13 @@ def inject_text(text, force_applescript=False):
         return inject_text_applescript(text)
     
     # Try clipboard method first (faster and more reliable)
+    # Debug: Check active app
+    try:
+        res = subprocess.run(["osascript", "-e", 'tell application "System Events" to name of first application process whose frontmost is true'], capture_output=True, text=True)
+        print(f"👀 Active App for Injection: {res.stdout.strip()}")
+    except:
+        pass
+
     if inject_text_clipboard(text):
         return True
 

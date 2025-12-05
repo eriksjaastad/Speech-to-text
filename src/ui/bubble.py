@@ -1,19 +1,30 @@
 import AppKit
 from Foundation import NSObject, NSMakeRect, NSColor, NSFont
 
+class NonActivatingPanel(AppKit.NSPanel):
+    """A panel that refuses to become the key window (prevents focus stealing)."""
+    def canBecomeKeyWindow(self):
+        return False
+    
+    def canBecomeMainWindow(self):
+        return False
+    
+    def worksWhenModal(self):
+        return True
+
 class StatusBubble:
     """
     A native macOS floating bubble window using PyObjC (AppKit).
     """
     def __init__(self):
         # Create the panel (window)
-        # Style mask: Borderless (no title bar)
-        style = AppKit.NSWindowStyleMaskBorderless
+        # Style mask: Borderless + NonactivatingPanel
+        style = AppKit.NSWindowStyleMaskBorderless | AppKit.NSWindowStyleMaskNonactivatingPanel
         
         # Geometry (will center later)
         rect = NSMakeRect(0, 0, 250, 60)
         
-        self.window = AppKit.NSPanel.alloc().initWithContentRect_styleMask_backing_defer_(
+        self.window = NonActivatingPanel.alloc().initWithContentRect_styleMask_backing_defer_(
             rect,
             style,
             AppKit.NSBackingStoreBuffered,
@@ -66,28 +77,23 @@ class StatusBubble:
             
             self.window.setFrameOrigin_((x, y))
 
+    def _show_on_main(self, text):
+        """Internal method to run on main thread."""
+        self.label.setStringValue_(text)
+        self.move_to_center()
+        self.window.orderFront_(None)
+
     def show(self, text):
         """Show the bubble with text (Thread-safe)."""
-        # Ensure label update runs on main thread
-        self.label.performSelectorOnMainThread_withObject_waitUntilDone_(
-            "setStringValue:", text, True
-        )
-        
-        # We need to center it too, but we can't easily dispatch 'move_to_center' via performSelector
-        # unless we expose it as an ObjC selector or just chance it.
-        # Generally setFrame from background is risky but often works.
-        # Let's try to run the whole show logic on main thread if possible, 
-        # but for now let's just make sure the visible parts are safe.
-        
-        self.move_to_center() # This uses setFrameOrigin, might need safety
-        
-        # Show window on main thread
-        self.window.performSelectorOnMainThread_withObject_waitUntilDone_(
-            "orderFront:", None, False
-        )
+        # Dispatch to main thread
+        from PyObjCTools import AppHelper
+        AppHelper.callAfter(self._show_on_main, text)
+
+    def _hide_on_main(self):
+        """Internal method to run on main thread."""
+        self.window.orderOut_(None)
 
     def hide(self):
         """Hide the bubble (Thread-safe)."""
-        self.window.performSelectorOnMainThread_withObject_waitUntilDone_(
-            "orderOut:", None, False
-        )
+        from PyObjCTools import AppHelper
+        AppHelper.callAfter(self._hide_on_main)
