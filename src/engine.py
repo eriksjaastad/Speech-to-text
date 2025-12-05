@@ -68,7 +68,9 @@ class WhisperEngine:
             initial_prompt=initial_prompt,  # THE SECRET SAUCE
             beam_size=5,
             temperature=0.0,
-            condition_on_previous_text=False
+            condition_on_previous_text=False,
+            vad_filter=True,
+            vad_parameters=dict(min_silence_duration_ms=500)
         )
 
         # Collect all segments

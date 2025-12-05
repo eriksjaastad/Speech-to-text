@@ -11,13 +11,14 @@ import numpy as np
 import tempfile
 import time
 from pathlib import Path
+from collections import deque
 from pynput import keyboard
 import scipy.io.wavfile as wav
 
 # Package imports (run with: python -m src.main)
 from src.engine import WhisperEngine, load_settings, load_vocab
 from src.post_process import load_replacements, process_mode_a, process_mode_b
-from src.injection import inject_text
+from src.injection import inject_text, get_active_app
 
 
 class ErikSTT:
@@ -61,6 +62,11 @@ class ErikSTT:
         self.audio_data = []
         self.sample_rate = 16000
         
+        # Pre-roll buffer to capture audio before hotkey press (0.5s)
+        # Assuming ~100ms chunks (conservative), 10 chunks = 1s. 
+        # We'll use a larger buffer to be safe, exact duration depends on callback blocksize.
+        self.pre_roll_buffer = deque(maxlen=20) 
+        
         # Start persistent stream (eliminates startup latency)
         print("\n🎤 Starting persistent audio stream...")
         self.stream = sd.InputStream(
@@ -74,6 +80,9 @@ class ErikSTT:
         # Track currently pressed keys for Option+Space hotkey (toggle mode)
         self.pressed_keys = set()
         
+        # Track target app for injection
+        self.target_app = None
+        
         print("\n✓ Initialization complete!")
         print("=" * 60)
     
@@ -85,6 +94,9 @@ class ErikSTT:
         # Only append if recording active
         if self.is_recording:
             self.audio_data.append(indata.copy())
+        else:
+            # Keep filling pre-roll buffer when not recording
+            self.pre_roll_buffer.append(indata.copy())
     
     def start_recording(self):
         """Start recording audio from microphone."""
@@ -93,11 +105,20 @@ class ErikSTT:
         
         # Clear previous audio data
         self.audio_data = []
+        
+        # Add pre-roll buffer contents to capture the start of speech
+        if self.pre_roll_buffer:
+            self.audio_data.extend(self.pre_roll_buffer)
+            
         self.is_recording = True
+        
+        # Capture the active app immediately when recording starts
+        self.target_app = get_active_app()
+        print(f"🎯 Target App: {self.target_app}")
         
         print("🎤 Recording...")
     
-    def stop_recording(self):
+    def stop_recording(self, **kwargs):
         """Stop recording and process the audio."""
         if not self.is_recording:
             return  # Not recording
@@ -109,10 +130,16 @@ class ErikSTT:
         print("⏹ Stopped")
         
         # Process the recorded audio
-        self.process_audio()
+        self.process_audio(**kwargs)
     
-    def process_audio(self):
-        """Transcribe, process, and inject the recorded audio."""
+    def process_audio(self, on_transcription_complete=None):
+        """
+        Transcribe, process, and inject the recorded audio.
+        
+        Args:
+            on_transcription_complete: Optional callback to run after transcription 
+                                     but BEFORE injection (e.g., to hide UI).
+        """
         if not self.audio_data:
             print("⚠ No audio data recorded")
             return
@@ -160,9 +187,14 @@ class ErikSTT:
                 
                 print(f"✨ Processed text: {processed_text}")
                 
+                # Run callback if provided (e.g., to hide bubble)
+                if on_transcription_complete:
+                    on_transcription_complete()
+                
                 # Inject text using clipboard-first method with AppleScript fallback
+                # restore_app ensures focus is back on the target before pasting
                 print("💉 Injecting text...")
-                success = inject_text(processed_text)
+                success = inject_text(processed_text, restore_app=self.target_app)
                 
                 if success:
                     print("✓ Text injection completed successfully")

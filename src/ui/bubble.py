@@ -9,6 +9,9 @@ class NonActivatingPanel(AppKit.NSPanel):
     def canBecomeMainWindow(self):
         return False
     
+    def acceptsFirstResponder(self):
+        return False
+    
     def worksWhenModal(self):
         return True
 

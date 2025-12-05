@@ -1,6 +1,33 @@
 import subprocess
 import time
 
+def get_active_app():
+    """Get the name of the currently frontmost application."""
+    try:
+        res = subprocess.run(
+            ["osascript", "-e", 'tell application "System Events" to name of first application process whose frontmost is true'],
+            capture_output=True, 
+            text=True,
+            check=True
+        )
+        return res.stdout.strip()
+    except Exception as e:
+        print(f"⚠ Could not get active app: {e}")
+        return None
+
+def activate_app(app_name):
+    """Activate (focus) a specific application by name."""
+    if not app_name:
+        return
+        
+    print(f"🔄 Restoring focus to: {app_name}")
+    script = f'tell application "{app_name}" to activate'
+    try:
+        subprocess.run(["osascript", "-e", script], check=True)
+        time.sleep(0.1) # Allow focus to settle
+    except Exception as e:
+        print(f"⚠ Could not activate app {app_name}: {e}")
+
 def inject_text_applescript(text):
     """
     Inject text using AppleScript keystroke (fallback method).
@@ -43,14 +70,19 @@ def inject_text_clipboard(text):
         print(f"✗ Clipboard injection failed: {e}")
         return False
 
-def inject_text(text, force_applescript=False):
+def inject_text(text, force_applescript=False, restore_app=None):
     """
     Inject text at cursor using primary clipboard method, fallback to AppleScript.
     
     Args:
         text: The text to inject
         force_applescript: If True, skip clipboard and use AppleScript directly (for testing)
+        restore_app: Optional name of app to refocus before injection
     """
+    # Restore focus if requested
+    if restore_app:
+        activate_app(restore_app)
+        
     # If forcing AppleScript (for testing fallback), skip clipboard
     if force_applescript:
         print("⚠ Forcing AppleScript method (testing fallback)...")
@@ -58,11 +90,9 @@ def inject_text(text, force_applescript=False):
     
     # Try clipboard method first (faster and more reliable)
     # Debug: Check active app
-    try:
-        res = subprocess.run(["osascript", "-e", 'tell application "System Events" to name of first application process whose frontmost is true'], capture_output=True, text=True)
-        print(f"👀 Active App for Injection: {res.stdout.strip()}")
-    except:
-        pass
+    current_app = get_active_app()
+    if current_app:
+        print(f"👀 Active App for Injection: {current_app}")
 
     if inject_text_clipboard(text):
         return True

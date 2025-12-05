@@ -93,26 +93,18 @@ class ErikSTTApp(rumps.App):
     def run_processing_thread(self):
         """Run the blocking processing logic in a background thread."""
         # This blocks for ~5s while Whisper runs
-        self.original_stop()
+        # We pass self.bubble.hide as a callback so it runs BEFORE text injection
+        self.original_stop(on_transcription_complete=self.bubble.hide)
         
         # Reset UI on the main thread
         # Note: self.title update is theoretically unsafe from background thread in standard Cocoa/PyObjC
         # but rumps seems to handle it or tolerate it. 
-        # For the bubble (AppKit), we MUST be careful. 
-        # Ideally, we should schedule `self.bubble.hide()` on the main runloop.
         
         # Reset Menubar
         self.title = "🎙️"
         self.menu["Status: Idle"].title = "Status: Idle"
         
-        # Hide Bubble
-        # We use a performSelectorOnMainThread approach implicitly by defining a helper or just risking it?
-        # AppKit widgets generally crash if touched from background. 
-        # Rumps doesn't expose a `call_on_main` easily.
-        # But we can use PyObjC:
-        self.bubble.window.performSelectorOnMainThread_withObject_waitUntilDone_(
-            "orderOut:", None, False
-        )
+        # Bubble is already hidden by the callback passed to original_stop
 
 if __name__ == "__main__":
     # Run the app
