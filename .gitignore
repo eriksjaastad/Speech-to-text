@@ -5,9 +5,6 @@
 *.ogg
 *.flac
 
-# Reviews and planning docs (personal notes)
-reviews/
-
 # Logs
 logs/
 *.log
