@@ -26,26 +26,30 @@ Confirm that all bug fixes are working. Add test coverage so we never regress. L
 
 ## Tasks
 
-### 1.1 Verify Focus Restoration Wiring
+### 1.1 Verify Focus Restoration Wiring ✅ COMPLETE
 
-**What to check:**
-- [ ] `src/injection.py` has `get_active_app()` function
-- [ ] `src/injection.py` has `activate_app()` function
-- [ ] `inject_text()` signature includes `restore_app=None` parameter
-- [ ] `inject_text()` calls `activate_app(restore_app)` before pasting
+**What to check (injection.py):**
+- [x] `src/injection.py` has `get_active_app()` function
+- [x] `src/injection.py` has `activate_app()` function
+- [x] `inject_text()` signature includes `restore_app=None` parameter
+- [x] `inject_text()` calls `activate_app(restore_app)` before pasting
 
-**What to check:**
-- [ ] `src/main.py` `ErikSTT` class has `self.target_app` attribute
-- [ ] `start_recording()` captures target app: `self.target_app = get_active_app()`
-- [ ] `start_recording()` prints `🎯 Target App: <name>` to console
+**What to check (main.py):**
+- [x] `src/main.py` `ErikSTT` class has `self.target_app` attribute
+- [x] `start_recording()` captures target app: `self.target_app = get_active_app()`
+- [x] `start_recording()` prints `🎯 Target App: <name>` to console
 
-**What to check:**
-- [ ] `src/menubar_app.py` passes `restore_app` to injection
-- [ ] Call looks like: `inject_text(processed_text, restore_app=self.stt.target_app)`
+**What to check (menubar_app.py):**
+- [x] `src/menubar_app.py` passes `restore_app` to injection (via main.py:199)
+- [x] Call looks like: `inject_text(processed_text, restore_app=self.target_app)`
+
+**Additional fixes applied during verification:**
+- [x] Added CGEvent (Quartz) for paste - fixes Electron apps like Cursor
+- [x] Increased timing delays for focus settle (0.3s) and clipboard (0.4s)
 
 ---
 
-### 1.2 Verify VAD Filter Enabled
+### 1.2 Verify VAD Filter Enabled ⚠️ DISABLED (see notes)
 
 **What to check:**
 - [ ] `src/engine.py` `transcribe()` method includes `vad_filter=True`
@@ -53,43 +57,47 @@ Confirm that all bug fixes are working. Add test coverage so we never regress. L
 
 **File location:** `src/engine.py`, inside the `transcribe()` method, in the `self.model.transcribe()` call.
 
----
-
-### 1.3 Verify Pre-roll Buffer Uses Deque
-
-**What to check:**
-- [ ] `src/main.py` imports `deque` from `collections`
-- [ ] `self.pre_roll_buffer` is initialized as `deque(maxlen=X)` not a list
-- [ ] `audio_callback()` does NOT have manual `pop(0)` logic
+**Note (Dec 5, 2025):** VAD was disabled during debugging. Can be re-enabled later if needed. Also discovered that `initial_prompt` (vocab injection) was causing truncated transcriptions - disabled for now.
 
 ---
 
-### 1.4 Verify Bubble Behavior
+### 1.3 Verify Pre-roll Buffer Uses Deque ✅ COMPLETE
 
 **What to check:**
-- [ ] `src/ui/bubble.py` `NonActivatingPanel` class has:
-  - `canBecomeKeyWindow()` returning `False`
-  - `canBecomeMainWindow()` returning `False`
-  - `acceptsFirstResponder()` returning `False`
-- [ ] `StatusBubble.__init__()` calls `setCollectionBehavior_()` with:
+- [x] `src/main.py` imports `deque` from `collections` (line 14)
+- [x] `self.pre_roll_buffer` is initialized as `deque(maxlen=20)` (line 68)
+- [x] `audio_callback()` does NOT have manual `pop(0)` logic
+
+---
+
+### 1.4 Verify Bubble Behavior ✅ COMPLETE
+
+**What to check:**
+- [x] `src/ui/bubble.py` `NonActivatingPanel` class has:
+  - `canBecomeKeyWindow()` returning `False` (line 6)
+  - `canBecomeMainWindow()` returning `False` (line 9)
+  - `acceptsFirstResponder()` returning `False` (line 12)
+- [x] `StatusBubble.__init__()` calls `setCollectionBehavior_()` (line 47) with:
   - `NSWindowCollectionBehaviorCanJoinAllSpaces`
   - `NSWindowCollectionBehaviorStationary`
   - `NSWindowCollectionBehaviorIgnoresCycle`
   - `NSWindowCollectionBehaviorFullScreenAuxiliary`
-- [ ] `hide()` method includes a delay (0.25s) after calling `orderOut_`
+- [x] `hide()` method includes a delay (0.25s) after calling `orderOut_`
 
 ---
 
-### 1.5 Verify Timing Configuration
+### 1.5 Verify Timing Configuration ✅ COMPLETE
 
 **What to check:**
-- [ ] `src/injection.py` `inject_text_clipboard()` has delay before paste (0.2s minimum)
-- [ ] `src/injection.py` `activate_app()` has delay after activation (0.15s minimum)
-- [ ] `src/ui/bubble.py` `hide()` has delay (0.25s)
+- [x] `src/injection.py` `inject_text_clipboard()` has delay before paste: **0.4s** (increased for Electron)
+- [x] `src/injection.py` `activate_app()` has delay after activation: **0.3s** (increased for Electron)
+- [x] `src/ui/bubble.py` `hide()` has delay: **0.25s**
 
 **Optional enhancement:**
 - [ ] Timing values are in `config/settings.yaml` instead of hardcoded
 - [ ] Config keys: `focus_settle_ms`, `clipboard_settle_ms`, `bubble_hide_ms`
+
+**Note:** Timing values increased from original to support Electron apps (Cursor, VS Code)
 
 ---
 
