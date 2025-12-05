@@ -40,7 +40,16 @@ class StatusBubble:
         self.window.setAlphaValue_(0.85)
         self.window.setOpaque_(False)
         self.window.setHasShadow_(True)
-        self.window.setIgnoresMouseEvents_(True)  # Pass clicks through (optional)
+        self.window.setIgnoresMouseEvents_(True)  # Pass clicks through
+        
+        # Critical: Prevent activation and focus stealing
+        self.window.setHidesOnDeactivate_(False)  # Don't hide when app deactivates
+        self.window.setCollectionBehavior_(
+            AppKit.NSWindowCollectionBehaviorCanJoinAllSpaces |
+            AppKit.NSWindowCollectionBehaviorStationary |
+            AppKit.NSWindowCollectionBehaviorIgnoresCycle |
+            AppKit.NSWindowCollectionBehaviorFullScreenAuxiliary
+        )
         
         # Round corners (standard macOS radius)
         self.window.contentView().setWantsLayer_(True)
@@ -97,6 +106,10 @@ class StatusBubble:
         self.window.orderOut_(None)
 
     def hide(self):
-        """Hide the bubble (Thread-safe)."""
+        """Hide the bubble (Thread-safe) with delay to ensure completion."""
+        import time
         from PyObjCTools import AppHelper
         AppHelper.callAfter(self._hide_on_main)
+        # Wait for hide to complete on main thread before returning
+        # This ensures the bubble is fully hidden before injection
+        time.sleep(0.25)
