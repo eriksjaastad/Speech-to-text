@@ -201,9 +201,6 @@ class ErikSTT:
     def _check_hotkey(self):
         """Check if Option+Space hotkey is active and toggle recording."""
         if 'option' in self.pressed_keys and keyboard.Key.space in self.pressed_keys:
-            # Clear the set to prevent repeat triggers while keys are held
-            self.pressed_keys.clear()
-            
             if self.is_recording:
                 # Already recording → stop and transcribe
                 self.stop_recording()
@@ -213,8 +210,13 @@ class ErikSTT:
     
     def on_press(self, key):
         """Handle key press events."""
-        # Add key to pressed set
         normalized = self._normalize_key(key)
+        
+        # Ignore key repeats (only process new presses)
+        if normalized in self.pressed_keys:
+            return
+            
+        # Add key to pressed set
         self.pressed_keys.add(normalized)
         
         # Check if Option+Space combo is complete
@@ -231,8 +233,8 @@ class ErikSTT:
             print("\n👋 Exiting...")
             return False  # Stop listener
     
-    def run(self):
-        """Start the application and listen for hotkeys."""
+    def start_listener(self, blocking=True):
+        """Start the hotkey listener."""
         print("\n" + "=" * 60)
         print("ERIK STT - READY")
         print("=" * 60)
@@ -247,14 +249,20 @@ class ErikSTT:
         ))
         print("\nListening for hotkeys...\n")
         
-        # Start keyboard listener
-        with keyboard.Listener(
+        # Create listener
+        self.listener = keyboard.Listener(
             on_press=self.on_press,
             on_release=self.on_release
-        ) as listener:
-            listener.join()
+        )
+        self.listener.start()
         
-        print("✓ Application stopped")
+        if blocking:
+            self.listener.join()
+            print("✓ Application stopped")
+
+    def run(self):
+        """Start the application in blocking mode (CLI)."""
+        self.start_listener(blocking=True)
 
 
 if __name__ == "__main__":

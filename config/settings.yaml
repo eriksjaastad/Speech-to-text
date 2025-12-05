@@ -1,5 +1,5 @@
 whisper:
-  model: "medium.en"
+  model: "distil-medium.en"
   device: "cpu"
   compute_type: "int8"
 

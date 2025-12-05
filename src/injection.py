@@ -33,6 +33,7 @@ def inject_text_clipboard(text):
         subprocess.run(["pbcopy"], input=text.encode(), check=True)
 
         # Paste with Cmd+V
+        time.sleep(0.2)  # Give clipboard a moment to update and app to be ready
         subprocess.run(["osascript", "-e",
             'tell application "System Events" to keystroke "v" using command down'
         ], check=True)

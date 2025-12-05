@@ -11,7 +11,7 @@
 ### ✅ Step 0: Project Setup & Structure — COMPLETE
 
 **What we did:**
-1. Created the complete directory structure (in `Speach-to-text/` directory)
+1. Created the complete directory structure (in `Speech-to-text/` directory)
 2. Set up Python virtual environment with **Python 3.11.14** (not 3.14 - ML libraries need 3.11/3.12)
 3. Created all config file stubs with safe defaults
 4. Created requirements.txt with correct packages
@@ -74,7 +74,7 @@ pip install -r requirements.txt
   - [x] `PyYAML` 6.0.3
 - [x] All stub files exist (including `src/__init__.py`)
 - [x] Config files created with minimal safe defaults
-- [x] `source venv/bin/activate` works from Speach-to-text directory
+- [x] `source venv/bin/activate` works from Speech-to-text directory
 
 **Config files created:**
 ```yaml
@@ -233,7 +233,7 @@ if __name__ == "__main__":
 
 **Test script:**
 ```python
-# test_audio.py (in Speach-to-text root)
+# test_audio.py (in Speech-to-text root)
 from src.audio_capture import record_audio, save_audio
 
 audio, sr = record_audio(duration=5)
@@ -244,7 +244,7 @@ print("✓ Test complete! Play test.wav to verify.")
 **DONE when:**
 - [x] Run `python test_audio.py` without errors
 - [x] macOS microphone permission granted (System Settings shows Python or Terminal)
-- [x] `test.wav` file exists in Speach-to-text directory
+- [x] `test.wav` file exists in Speech-to-text directory
 - [x] Playing `test.wav` (double-click or `afplay test.wav`) sounds clear
 - [x] Audio is 5 seconds long, contains your voice, no distortion
 
@@ -756,6 +756,7 @@ if __name__ == "__main__":
 1. Write `src/main.py` that ties everything together
 2. Add hotkey listener with `pynput`
 3. Create end-to-end flow: hold key → record → transcribe → inject
+4. **Requirement:** Text must be injected at the *active cursor location* (wherever focus is)
 
 **Create src/main.py:**
 ```python
@@ -959,9 +960,9 @@ if __name__ == "__main__":
 - **Option C:** Let user remap Spotlight/Raycast first, then use Option+Space
 
 **DONE when:**
-- [ ] Production hotkey is configured and working
-- [ ] No conflicts with system hotkeys
-- [ ] Feels natural to use (matching Superwhisper muscle memory)
+- [x] Production hotkey is configured and working
+- [x] No conflicts with system hotkeys (except Superwhisper, which we are replacing)
+- [x] Feels natural to use (matching Superwhisper muscle memory)
 
 ---
 
@@ -969,11 +970,23 @@ if __name__ == "__main__":
 
 **Reference:** Section 3.2
 
+**Troubleshooting: Accessibility Permissions**
+If you see `System Events got an error: osascript is not allowed to send keystrokes`:
+1. Open **System Settings** → **Privacy & Security** → **Accessibility**.
+2. Find your terminal app (e.g., `Terminal`, `iTerm`, or `Cursor`) in the list.
+3. **Toggle it ON**. (If it's already on, toggle it OFF and then ON again).
+4. **Restart the terminal** and run `./run_app.sh` again.
+
 **What to do:**
 1. Write `src/menubar_app.py` with rumps
 2. Add status indicator (idle/recording/transcribing)
 3. Add mode toggle in dropdown menu
 4. Replace command-line app with menubar app
+5. **Add Visual Feedback Bubble:**
+    - Show overlay ONLY when active (Option+Space start)
+    - State 1: 🔴 Recording
+    - State 2: 🧠 Transcribing
+    - Hide overlay immediately after text injection
 
 **DONE when:**
 - [ ] Menubar icon appears in macOS menu bar
@@ -981,6 +994,7 @@ if __name__ == "__main__":
 - [ ] Status shows current state (idle/recording/etc.)
 - [ ] Can toggle between Mode A and Mode B
 - [ ] Can quit from menubar
+- [ ] **Bubble appears/updates/disappears correctly**
 
 ---
 
