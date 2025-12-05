@@ -1,6 +1,20 @@
 import subprocess
 import time
 
+# Try to import Quartz for CGEvent (most reliable paste method)
+try:
+    from Quartz import (
+        CGEventCreateKeyboardEvent,
+        CGEventPost,
+        kCGHIDEventTap,
+        CGEventSetFlags,
+        kCGEventFlagMaskCommand
+    )
+    HAS_QUARTZ = True
+except ImportError:
+    HAS_QUARTZ = False
+    print("⚠ Quartz not available, using AppleScript fallback for paste")
+
 def get_active_app():
     """Get the name of the currently frontmost application."""
     try:
@@ -24,7 +38,7 @@ def activate_app(app_name):
     script = f'tell application "{app_name}" to activate'
     try:
         subprocess.run(["osascript", "-e", script], check=True)
-        time.sleep(0.1) # Allow focus to settle
+        time.sleep(0.3)  # Allow focus to settle (0.3s for Electron apps like Cursor)
     except Exception as e:
         print(f"⚠ Could not activate app {app_name}: {e}")
 
@@ -50,22 +64,71 @@ def inject_text_applescript(text):
         print(f"✗ AppleScript injection failed: {e}")
         return False
 
+def paste_with_cgevent():
+    """Paste using CGEvent (most reliable for Electron apps)."""
+    if not HAS_QUARTZ:
+        return False
+    
+    try:
+        # Key code 9 = 'v'
+        # Create key down event with Command modifier
+        event_down = CGEventCreateKeyboardEvent(None, 9, True)
+        CGEventSetFlags(event_down, kCGEventFlagMaskCommand)
+        
+        # Create key up event with Command modifier
+        event_up = CGEventCreateKeyboardEvent(None, 9, False)
+        CGEventSetFlags(event_up, kCGEventFlagMaskCommand)
+        
+        # Post the events
+        CGEventPost(kCGHIDEventTap, event_down)
+        CGEventPost(kCGHIDEventTap, event_up)
+        
+        print("✓ Paste sent via CGEvent (Quartz)")
+        return True
+    except Exception as e:
+        print(f"⚠ CGEvent paste failed: {e}")
+        return False
+
+def paste_with_applescript():
+    """Paste using AppleScript (fallback)."""
+    try:
+        paste_script = '''
+        tell application "System Events"
+            key code 9 using command down
+        end tell
+        '''
+        subprocess.run(["osascript", "-e", paste_script], check=True)
+        print("✓ Paste sent via AppleScript")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"⚠ AppleScript paste failed: {e}")
+        return False
+
 def inject_text_clipboard(text):
     """
     Inject text using clipboard + paste (primary method).
     Copies text to clipboard, then pastes with Cmd+V.
+    Uses CGEvent (Quartz) if available, falls back to AppleScript.
     """
     try:
         # Copy to clipboard
         subprocess.run(["pbcopy"], input=text.encode(), check=True)
+        print(f"📋 Copied to clipboard: {text[:50]}...")
 
-        # Paste with Cmd+V
-        time.sleep(0.25)  # Give clipboard a moment to update and app to be ready (0.25s for Electron apps)
-        subprocess.run(["osascript", "-e",
-            'tell application "System Events" to keystroke "v" using command down'
-        ], check=True)
-        print("✓ Text injected via clipboard paste (primary method)")
-        return True
+        # Wait for clipboard and app to be ready
+        time.sleep(0.4)  # Longer delay for Electron apps
+        
+        # Try CGEvent first (most reliable), then AppleScript
+        if HAS_QUARTZ and paste_with_cgevent():
+            print("✓ Text injected via clipboard paste (CGEvent)")
+            return True
+        elif paste_with_applescript():
+            print("✓ Text injected via clipboard paste (AppleScript)")
+            return True
+        else:
+            print("✗ Both paste methods failed")
+            return False
+            
     except subprocess.CalledProcessError as e:
         print(f"✗ Clipboard injection failed: {e}")
         return False

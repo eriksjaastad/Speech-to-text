@@ -58,19 +58,23 @@ class WhisperEngine:
         start_time = time.time()
 
         # Build initial_prompt if vocab provided
+        # NOTE: initial_prompt was causing truncated transcriptions!
+        # Disabled for now - vocab will be handled via post-processing regex instead
         initial_prompt = None
-        if custom_vocab:
-            initial_prompt = "Key terms: " + ", ".join(custom_vocab) + "."
+        # if custom_vocab:
+        #     initial_prompt = "Key terms: " + ", ".join(custom_vocab) + "."
 
         segments, info = self.model.transcribe(
             audio_path,
             language=language,
-            initial_prompt=initial_prompt,  # THE SECRET SAUCE
+            # initial_prompt disabled - was breaking transcription
+            # initial_prompt=initial_prompt,
             beam_size=5,
             temperature=0.0,
             condition_on_previous_text=False,
-            vad_filter=True,
-            vad_parameters=dict(min_silence_duration_ms=500)
+            # VAD temporarily disabled for debugging
+            # vad_filter=True,
+            # vad_parameters=dict(min_silence_duration_ms=500)
         )
 
         # Collect all segments
