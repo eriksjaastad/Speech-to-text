@@ -6,6 +6,42 @@
 
 ---
 
+## Session Notes (December 5, 2025)
+
+### What We Fixed
+
+**Bug 1: Paste Not Working in Cursor (Electron app)**
+- **Root cause:** AppleScript `keystroke "v" using command down` doesn't work reliably with Electron apps
+- **Fix:** Added CGEvent (Quartz framework) paste method that posts keystrokes directly to HID event tap
+- **Files changed:** `src/injection.py`
+
+**Bug 2: Transcription Truncated (only "Testing." from full sentences)**
+- **Root cause:** `initial_prompt` with vocab terms was breaking faster-whisper output
+- **Fix:** Disabled vocab injection via initial_prompt; jargon handled via regex post-processing instead
+- **Files changed:** `src/engine.py`
+
+### Testing Performed
+1. ✅ "testing 123 testing" → Transcribed and pasted correctly
+2. ✅ MNQ variations tested → "M-N-Q" correctly replaced with "MNQ"
+3. ✅ Paste working in Cursor via Option+Space
+4. ✅ Cmd+V manual paste also works (clipboard is correct)
+
+### Key Learnings
+- **CGEvent > AppleScript** for Electron apps (Cursor, VS Code, Slack)
+- **Regex post-processing > initial_prompt** for jargon (more reliable, deterministic)
+- **Timing matters:** Increased delays to 0.3-0.4s for Electron focus/clipboard settle
+
+### MNQ Replacements Added
+```yaml
+"m-n-q": "MNQ"
+"m in-n-q": "MNQ"
+"m-and-q": "MNQ"
+"m&q": "MNQ"
+"m & q": "MNQ"
+```
+
+---
+
 ## Sprint Overview
 
 | Sprint | Name | Goal |

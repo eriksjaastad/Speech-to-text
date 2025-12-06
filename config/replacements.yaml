@@ -1,10 +1,15 @@
 replacements:
-  # MNQ variations
+  # MNQ variations (add new mishearings as you find them!)
   "man cue": "MNQ"
   "m and q": "MNQ"
   "m n q": "MNQ"
   "m and cue": "MNQ"
   "mnq": "MNQ"
+  "m&q": "MNQ"
+  "m & q": "MNQ"
+  "m-n-q": "MNQ"
+  "m in-n-q": "MNQ"
+  "m-and-q": "MNQ"
   
   # Place names
   "co cheese": "Cochise"
