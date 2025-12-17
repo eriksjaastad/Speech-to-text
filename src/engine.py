@@ -53,7 +53,7 @@ class WhisperEngine:
             )
             print("Model loaded!")
 
-    def transcribe(self, audio_path, language="en", custom_vocab=None):
+    def transcribe(self, audio_path, language="en", custom_vocab=None, beam_size=5):
         """Transcribe audio file with optional vocab injection."""
         start_time = time.time()
 
@@ -69,7 +69,7 @@ class WhisperEngine:
             language=language,
             # initial_prompt disabled - was breaking transcription
             # initial_prompt=initial_prompt,
-            beam_size=5,
+            beam_size=beam_size,
             temperature=0.0,
             condition_on_previous_text=False,
             vad_filter=True,

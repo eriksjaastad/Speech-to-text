@@ -173,7 +173,8 @@ class ErikSTT:
                 result = self.engine.transcribe(
                     temp_path,
                     language="en",
-                    custom_vocab=self.custom_vocab
+                    custom_vocab=self.custom_vocab,
+                    beam_size=self.settings.get("whisper", {}).get("beam_size", 5)
                 )
                 
                 raw_text = result['text']

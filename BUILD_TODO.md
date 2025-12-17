@@ -1,8 +1,44 @@
 # Erik STT — Build TODO List
 
 **Created:** December 2, 2025  
+**Updated:** December 13, 2025 (Core Requirements Clarified)  
 **Based on:** ERIK_STT_FINAL_PROJECT_DOC.md  
 **Goal:** Build v1 in one day, then iterate
+
+---
+
+## 🎯 CORE REQUIREMENTS (Updated December 13, 2025)
+
+**Context:** Erik uses speech-to-text 1000+ times per day, primarily for interacting with AI assistants (Claude, ChatGPT, etc.). This is life-critical infrastructure - more usage than his phone. SuperWhisper is the current tool but has two major pain points.
+
+### Primary Success Criteria:
+1. **Zero hallucinations** - Specifically no repetition loops ("same sentence 10 times")
+2. **Speed matches SuperWhisper** - Fast enough for continuous daily use
+
+### What This Tool Does NOT Need:
+- ❌ **NO cleanup/rewriting** - Erik wants exactly what he said, verbatim
+- ❌ **NO filler word removal** - "um", "like", "a lot" are fine (AIs don't care)
+- ❌ **NO smart post-processing** - Just accurate transcription
+
+### What This Tool DOES Need:
+- ✅ **Accurate raw transcription** - What was said, nothing more
+- ✅ **Jargon dictionary** - Erik/not Eric, MNQ, Runpod, etc. (already implemented)
+- ✅ **Fast** - Under 3-4 seconds end-to-end
+- ✅ **Reliable** - No loops, no failures that pull focus from actual work
+
+### Use Case:
+- **Primary:** Talking to AI assistants all day (99.99% of usage)
+- **Secondary:** Everything else (messages, notes, etc.)
+- **Critical:** This is in Erik's workflow path for EVERYTHING - if it breaks, all other work stops
+
+### Risk Management:
+- **SuperWhisper fallback** - Keep it installed, one click away
+- **Testing hesitation** - Testing STT is painful/subjective, so fear of commitment is real
+- **Maintenance burden** - If this tool needs debugging during other work, that's a workflow killer
+- **Escape hatch** - If it fails 2+ times in a day, Erik can switch back to SuperWhisper without guilt
+
+### Success Definition:
+Tool is better than SuperWhisper at Erik's two specific pain points (hallucinations + speed), even if SuperWhisper is better at other things Erik doesn't care about.
 
 ---
 
