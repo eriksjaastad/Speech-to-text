@@ -1093,6 +1093,215 @@ If you see `System Events got an error: osascript is not allowed to send keystro
 
 ---
 
+## 🧪 Testing & Quality Assurance
+
+**Goal:** Systematically test and expose the two critical SuperWhisper pain points:
+1. **Tail-cutoff** - Last sentence getting dropped
+2. **Pause handling** - Audio with pauses causing truncation or weird transcription
+
+**Key Question:** Is weirdness from audio capture OR transcription? Testing will isolate this.
+
+### Phase 1: Build Test Infrastructure (1-2 hours)
+
+#### Step 1: Create Test Corpus
+**What:** Record 10-15 deliberately difficult audio clips  
+**Where:** `test_data/corpus/`  
+**Structure:**
+```
+test_data/
+└── corpus/
+    ├── 01_quick_phrase.wav         # 2-3 seconds
+    ├── 01_quick_phrase.txt         # Ground truth transcript
+    ├── 02_medium_sentence.wav      # 5-10 seconds
+    ├── 02_medium_sentence.txt
+    ├── 03_long_dictation.wav       # 15-30 seconds
+    ├── 03_long_dictation.txt
+    ├── 04_jargon_heavy.wav         # MNQ, Runpod, etc.
+    ├── 04_jargon_heavy.txt
+    ├── 05_trailing_important.wav   # "...and the password is banana"
+    ├── 05_trailing_important.txt
+    ├── 06_mid_pause.wav            # Pause in middle of sentence
+    ├── 06_mid_pause.txt
+    ├── 07_long_pause.wav           # 2-3 second pause, then continue
+    ├── 07_long_pause.txt
+    ├── 08_fast_stop.wav            # Stop speaking + stop recording immediately
+    ├── 08_fast_stop.txt
+    ├── 09_breath_then_final.wav    # Breath + pause + final sentence
+    ├── 09_breath_then_final.txt
+    ├── 10_two_sentences_end.wav    # Final line is two short sentences
+    └── 10_two_sentences_end.txt
+```
+
+**Specific Test Scenarios:**
+
+| # | Name | Duration | What to Say | Why It's Hard |
+|---|------|----------|-------------|---------------|
+| 1 | Quick phrase | 2-3s | "Test number one" | Tests pre-roll buffer captures first word |
+| 2 | Medium sentence | 5-10s | "I'm trading MNQ futures on TradeZella today" | Baseline jargon test |
+| 3 | Long dictation | 15-30s | (Natural paragraph about trading/tech) | Tests sustained recording |
+| 4 | Jargon heavy | 10s | "Check Runpod, Ollama, and Victron in Cochise County" | Multiple jargon terms |
+| 5 | Trailing important | 8s | "The three requirements are speed, accuracy, and the most important one is reliability" | **TAIL-CUTOFF TEST** - last word critical |
+| 6 | Mid-sentence pause | 10s | "I was thinking... about the MNQ trade" | **PAUSE TEST** - pause doesn't truncate |
+| 7 | Long pause | 15s | "First point is speed. [3s pause] Second point is accuracy." | **PAUSE TEST** - long pause, then continue |
+| 8 | Fast stop | 3s | "Quick test stop" [immediate stop] | Tests if recording captures tail |
+| 9 | Breath then final | 12s | "Those are the main points. [breath, 1s pause] Oh and one more thing, reliability matters most." | **TAIL-CUTOFF TEST** - restart at end |
+| 10 | Two sentences end | 10s | "That's the summary. Got it? Good." | **TAIL-CUTOFF TEST** - multiple sentences at end |
+
+#### Step 2: Create Test Harness
+**File:** `test_runner.py`
+
+**What it does:**
+1. Load all `.wav` files from `test_data/corpus/`
+2. For each file:
+   - Save raw audio to `test_results/[name]/audio_raw.wav` (copy)
+   - Run transcription pipeline
+   - Save transcription to `test_results/[name]/transcribed.txt`
+   - Save timing metrics to `test_results/[name]/metrics.json`
+   - Compare against ground truth `.txt`
+   - Score: accuracy, tail-present (Y/N), latency
+3. Generate summary report: `test_results/REPORT.md`
+
+**Key Feature:** Isolate audio capture vs transcription
+- Test harness feeds pre-recorded `.wav` files directly to engine
+- This bypasses audio capture entirely
+- If test passes with pre-recorded audio but fails live → audio capture issue
+- If test fails with pre-recorded audio → transcription issue
+
+#### Step 3: Scoring System
+
+**Per-Test Metrics:**
+```json
+{
+  "test_name": "05_trailing_important",
+  "ground_truth": "The three requirements are speed, accuracy, and the most important one is reliability",
+  "transcribed": "The three requirements are speed, accuracy, and the most important one is reliability",
+  "tail_cutoff": false,
+  "last_5_words_match": true,
+  "word_error_rate": 0.0,
+  "latency_ms": 3200,
+  "pass": true
+}
+```
+
+**Tail-Cutoff Detection:**
+- Compare last 5 words of ground truth vs transcribed
+- If < 3 words match → FAIL (tail cutoff detected)
+- If ≥ 3 words match → PASS
+
+**Pause Handling Detection:**
+- For tests with known pauses (06, 07, 09):
+- Check if text after pause is present
+- If missing → FAIL (pause caused truncation)
+
+### Phase 2: Run Initial Battery (30 min)
+
+#### Step 1: Record Test Corpus
+```bash
+# Create recording helper
+python test_record_corpus.py
+```
+
+Script will:
+1. Display scenario name + what to say
+2. Countdown 3-2-1
+3. Record audio
+4. Save to `test_data/corpus/[name].wav`
+5. Prompt you to type ground truth → save to `[name].txt`
+6. Move to next test
+
+**DONE when:**
+- [ ] 10 audio files recorded
+- [ ] 10 ground truth `.txt` files created
+- [ ] Can play back audio and verify quality
+
+#### Step 2: Run Test Battery
+```bash
+python test_runner.py
+```
+
+**DONE when:**
+- [ ] All 10 tests run automatically
+- [ ] `test_results/REPORT.md` generated
+- [ ] Report shows: 
+  - How many tests passed/failed
+  - Which tests show tail-cutoff
+  - Which tests show pause issues
+  - Average latency
+
+#### Step 3: Analyze Results
+
+**Questions to Answer:**
+1. **Tail-cutoff rate:** How many tests (05, 09, 10) preserve the last sentence?
+2. **Pause handling:** Do tests (06, 07, 09) transcribe text after pauses?
+3. **Latency:** Average time from audio end → transcription complete?
+4. **Audio vs Transcription:** 
+   - If tests pass with pre-recorded audio → live capture is the problem
+   - If tests fail with pre-recorded audio → transcription/model is the problem
+
+### Phase 3: Flight Recorder (Ongoing)
+
+**Add to `src/main.py` and `src/menubar_app.py`:**
+- Every real recording session auto-saves to `sessions/YYYY-MM-DDTHH-MM-SS/`
+- Captures: `audio_raw.wav`, `transcribed.txt`, `events.json`
+- Builds test corpus organically from real usage
+- When you encounter a bug, you have the exact audio that caused it
+
+**Implementation:**
+```python
+def save_session(self, audio_data, transcription, metadata):
+    """Save every recording session for debugging."""
+    timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    session_dir = Path(f"sessions/{timestamp}")
+    session_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Save raw audio
+    write(session_dir / "audio_raw.wav", self.sample_rate, audio_data)
+    
+    # Save transcription
+    (session_dir / "transcribed.txt").write_text(transcription)
+    
+    # Save metadata (timing, config, etc.)
+    (session_dir / "events.json").write_text(json.dumps(metadata, indent=2))
+```
+
+**DONE when:**
+- [ ] Every Option+Space recording auto-saves
+- [ ] Can replay any session's audio through test harness
+- [ ] Build corpus from real usage over time
+
+### Phase 4: Continuous Testing (Automated)
+
+**Goal:** Run tests while you work on other things
+
+```bash
+# Run tests every time code changes
+python test_watch.py
+```
+
+Or add to git pre-commit hook:
+```bash
+# .git/hooks/pre-commit
+python test_runner.py --quick
+```
+
+**DONE when:**
+- [ ] Can run full test battery in <2 minutes
+- [ ] Tests run automatically on code changes
+- [ ] Red/green feedback instant
+
+---
+
+### Success Criteria
+
+Tool is ready when:
+1. ✅ **10/10 tests pass** - No tail-cutoff, no pause truncation
+2. ✅ **Latency < 3 seconds** - Acceptable speed
+3. ✅ **Reproducible** - Same audio → same transcription every time
+4. ✅ **Root cause identified** - Know if issues are audio capture or transcription
+5. ✅ **Better than SuperWhisper** - Pass tests that SuperWhisper fails
+
+---
+
 ## Future Phases (Post-v1)
 
 ### Phase 3: Correction Loop
